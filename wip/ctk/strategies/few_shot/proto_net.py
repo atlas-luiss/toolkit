@@ -1,4 +1,8 @@
-"""Prototypical Networks for few-shot / continual learning."""
+"""Prototypical Networks for few-shot / continual learning.
+
+   from the protonet repo https://github.com/orobix/Prototypical-Networks-for-Few-shot-Learning-PyTorch.git
+
+"""
 
 from __future__ import annotations
 
