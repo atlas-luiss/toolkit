@@ -68,9 +68,8 @@ model = ViTModel(
         freeze_backbone=True,
         device=torch.device(DEVICE),
     )
-bench    = benchamrk
-model    = model 
-scenario = TaskIncremental(bench, **SCENARIO_KW)
+
+scenario = TaskIncremental(benchmark, **SCENARIO_KW)
 strategy = LoRAStrategy(rank=8, lora_alpha=16, merge_after_task=False)
 results  = ContinualTrainer(model, scenario, strategy, **TRAINER_KW).fit()
 

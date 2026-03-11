@@ -49,7 +49,7 @@ data/
 *.swo
 *~
 
-# Claude session files
+
 .claude/
 
 # OS
