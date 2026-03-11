@@ -10,7 +10,7 @@ setup(
     version="0.1.0",
     author="Collage Lab",
     author_email="",
-    description="Collage Toolkit — continual learning framework from Collage Lab",
+    description="Collage Toolkit — ML framework from Collage Lab",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://www.vincenzolomonaco.com/collage-lab",
