@@ -228,7 +228,7 @@ class ContinualTrainer:
         }
 
     # ------------------------------------------------------------------
-    # CL metrics
+    # CL metrics - forgetting, avg-accuracy, backward transfer
     # ------------------------------------------------------------------
 
     def _compute_cl_metrics(self, acc_matrix: np.ndarray) -> dict:
@@ -321,3 +321,6 @@ class ContinualTrainer:
 
 # Convenience alias
 Trainer = ContinualTrainer
+
+
+# - add forgetting alleviation as well
