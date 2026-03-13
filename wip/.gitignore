@@ -55,7 +55,7 @@ data/
 .DS_Store
 Thumbs.db
 
-examples/
+
 experiments/
 scripts/
 tests/
