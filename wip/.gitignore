@@ -50,7 +50,8 @@ data/
 *~
 /leonardo_work/IscrC_ConFT/eric/mockups/toolkit/wip/examples/real/
 /leonardo_work/IscrC_ConFT/eric/mockups/toolkit/wip/notebooks
-
+/leonardo_work/IscrC_ConFT/eric/mockups/toolkit/wip/training_log.csv
+/leonardo_work/IscrC_ConFT/eric/mockups/toolkit/wip/experiments
 
 # OS
 .DS_Store

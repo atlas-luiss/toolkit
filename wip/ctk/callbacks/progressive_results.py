@@ -6,12 +6,6 @@ import numpy as np
 from tabulate import tabulate
 from ctk.utils import format_time
 
-    
-def format_time(seconds):
-    h, rem = divmod(int(seconds), 3600)
-    m, s = divmod(rem, 60)
-    return f"{h:02d}:{m:02d}:{s:02d}"
-
 
 class Callback:
     """Base class for all callbacks. Override only the hooks you need."""
