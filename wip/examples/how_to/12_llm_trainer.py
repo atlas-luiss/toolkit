@@ -28,46 +28,6 @@ from torch.utils.data import DataLoader, TensorDataset
 from ctk.trainers import LLMTrainer, LLMTrainingConfig
 
 
-# ---------------------------------------------------------------------------
-# Mock LLMModel (replace with ctk.models.LLMModel in real use)
-# ---------------------------------------------------------------------------
-
-class MockLLMModel(nn.Module):
-    """
-    Stands in for LLMModel so this example runs without HuggingFace weights.
-    A real LLMModel wraps any HF AutoModelForCausalLM / AutoModelForSeq2SeqLM.
-    """
-    VOCAB = 32
-    EMBED = 64
-
-    def __init__(self):
-        super().__init__()
-        self.device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.embed   = nn.Embedding(self.VOCAB, self.EMBED)
-        self.transformer = nn.Sequential(
-            nn.Linear(self.EMBED, self.EMBED), nn.GELU()
-        )
-        self.lm_head = nn.Linear(self.EMBED, self.VOCAB)
-
-    def forward(self, input_ids=None, attention_mask=None, labels=None, **kwargs):
-        import torch.nn.functional as F
-        # input_ids: (batch, seq_len) → embed → (batch, seq_len, EMBED)
-        x      = self.embed(input_ids)
-        x      = self.transformer(x)          # (batch, seq_len, EMBED)
-        logits = self.lm_head(x)              # (batch, seq_len, VOCAB)
-        loss   = None
-        if labels is not None:
-            # Flatten to (batch*seq_len, VOCAB) vs (batch*seq_len,)
-            loss = F.cross_entropy(logits.view(-1, self.VOCAB), labels.view(-1))
-        return type("Out", (), {"loss": loss, "logits": logits})()
-
-    def trainable_params(self):
-        """Required by LLMTrainer."""
-        return [p for p in self.parameters() if p.requires_grad]
-
-    def enable_gradient_checkpointing(self):
-        pass   # no-op for the mock
-
 
 # ---------------------------------------------------------------------------
 # Data — sequence batches of (input_ids, attention_mask, labels)
@@ -133,31 +93,15 @@ def compute_metrics(eval_loader, model):
 # ---------------------------------------------------------------------------
 # Train
 # ---------------------------------------------------------------------------
-model = MockLLMModel()
 
-trainer = LLMTrainer(
-    model           = model,
-    config          = config,
-    train_loader    = train_loader,
-    eval_loader     = eval_loader,
-    compute_metrics = compute_metrics,
+
+from ctk.models import LLMModel
+
+model = LLMModel(
+    model_name_or_path = "bert-base-uncased",
+    load_in_4bit       = True,     # QLoRA
 )
+model.add_lora(r=16, lora_alpha=32)
 
-results = trainer.train()
-
-print(f"\nLLMTrainer done.")
-print(f"  Final train loss: {results.get('train_loss', 'n/a')}")
-
-# ---------------------------------------------------------------------------
-# Real usage with LLMModel + LoRA
-# ---------------------------------------------------------------------------
-# from ctk.models import LLMModel
-#
-# model = LLMModel(
-#     model_name_or_path = "meta-llama/Llama-2-7b-hf",
-#     load_in_4bit       = True,     # QLoRA
-# )
-# model.add_lora(task_id=0, rank=16, lora_alpha=32)
-#
-# trainer = LLMTrainer(model, config, train_loader, eval_loader)
-# trainer.train()
+trainer = LLMTrainer(model, config, train_loader, eval_loader, compute_metrics)
+trainer.train()

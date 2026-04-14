@@ -48,7 +48,8 @@ data/
 *.swp
 *.swo
 *~
-
+/leonardo_work/IscrC_ConFT/eric/mockups/toolkit/wip/examples/real/
+/leonardo_work/IscrC_ConFT/eric/mockups/toolkit/wip/notebooks
 
 
 # OS
