@@ -15,14 +15,12 @@ class Finetuning(CLScenario):
     """Sequential fine-tuning without forgetting prevention; same head layout as ClassIncremental."""
 
     def setup(self, model: CLModel) -> None:
-        """Attach and pre-grow IncrementalClassifier for all tasks (no forgetting prevention)."""
+        """Attach an IncrementalClassifier pre-grown to cover all benchmark classes."""
         from ctk.models.base import IncrementalClassifier
 
         head = IncrementalClassifier(model.embed_dim, initial_classes=0)
         model.set_head(head)
-
-        for split in self.benchmark.get_splits():
-            model.grow_head(len(split.classes))
+        model.grow_head(self.benchmark.total_classes)
 
 
 class JointTraining(CLScenario):

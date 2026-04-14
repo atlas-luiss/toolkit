@@ -12,18 +12,22 @@ from .base import CLScenario, TaskInfo
 
 
 class _LabelRemap(Dataset):
-    """Remaps global labels to task-local (0-based) labels by subtracting class_offset."""
+    """Remaps global class IDs to task-local (0-based) indices.
 
-    def __init__(self, dataset: Dataset, class_offset: int) -> None:
-        self.dataset = dataset
-        self.offset = class_offset
+    Uses an explicit dict mapping so non-consecutive and shuffled class
+    orderings are handled correctly.
+    """
+
+    def __init__(self, dataset: Dataset, class_map: dict) -> None:
+        self.dataset   = dataset
+        self.class_map = class_map
 
     def __len__(self) -> int:
         return len(self.dataset)  # type: ignore[arg-type]
 
     def __getitem__(self, idx: int):
         x, y = self.dataset[idx]
-        return x, y - self.offset
+        return x, self.class_map[int(y)]
 
 
 class TaskIncremental(CLScenario):
@@ -45,10 +49,12 @@ class TaskIncremental(CLScenario):
         """Like the base but wraps each dataset with _LabelRemap for local labels."""
         task_infos: List[TaskInfo] = []
         for split in self.benchmark.get_splits():
-            offset = min(split.classes)
+            # Map each original class ID to its local 0-based index within the task.
+            # Works correctly for consecutive, non-consecutive, and shuffled class orderings.
+            class_map = {cls: local for local, cls in enumerate(split.classes)}
 
-            remapped_train = _LabelRemap(split.train_dataset, offset)
-            remapped_test  = _LabelRemap(split.test_dataset,  offset)
+            remapped_train = _LabelRemap(split.train_dataset, class_map)
+            remapped_test  = _LabelRemap(split.test_dataset,  class_map)
 
             train_loader = DataLoader(
                 remapped_train,
