@@ -12,7 +12,7 @@ from ctk.strategies.replay import (
     HerdingBuffer,
 )
 from ctk.strategies.regularization import EWC, EWCOnline, LwF, MAS
-from ctk.strategies.peft import LoRAStrategy, LoRAReplay, HAM
+from ctk.strategies.peft import LoRAAdapter, LoRAStrategy, LoRAReplay, HAM
 from ctk.strategies.few_shot import ProtoNet
 
 from ctk.strategies.merging import (
@@ -36,6 +36,7 @@ __all__ = [
     "EWCOnline",
     "LwF",
     "MAS",
+    "LoRAAdapter",
     "LoRAStrategy",
     "LoRAReplay",
     "HAM",

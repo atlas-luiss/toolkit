@@ -1,5 +1,4 @@
-from .lora import LoRAStrategy
-from .lora_replay import LoRAReplay
+from .lora import LoRAAdapter, LoRAStrategy, LoRAReplay
 from .ham import HAM
 
-__all__ = ['LoRAStrategy', 'LoRAReplay', 'HAM']
+__all__ = ['LoRAAdapter', 'LoRAStrategy', 'LoRAReplay', 'HAM']
