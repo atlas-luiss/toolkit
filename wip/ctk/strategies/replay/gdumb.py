@@ -62,6 +62,6 @@ class GDumb(Strategy):
                 x_b = x_b.to(device)
                 y_b = y_b.to(device)
                 optimizer.zero_grad()
-                loss = F.cross_entropy(model(x_b), y_b)
+                loss = F.cross_entropy(model(x_b, task_id), y_b)
                 loss.backward()
                 optimizer.step()

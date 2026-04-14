@@ -31,9 +31,10 @@ class IncrementalClassifier(nn.Module):
         if self._fc is None:
             self._fc = nn.Linear(self.embed_dim, num_new_classes)
         else:
-            old_n = self._fc.out_features
-            new_n = old_n + num_new_classes
-            new_fc = nn.Linear(self.embed_dim, new_n)
+            old_n  = self._fc.out_features
+            new_n  = old_n + num_new_classes
+            device = self._fc.weight.device   # stay on whatever device _fc is on
+            new_fc = nn.Linear(self.embed_dim, new_n, device=device)
             new_fc.weight.data[:old_n].copy_(self._fc.weight.data)
             new_fc.bias.data[:old_n].copy_(self._fc.bias.data)
             self._fc = new_fc
@@ -166,7 +167,11 @@ class CLModel(nn.Module, ABC):
         return [p for p in self.parameters() if p.requires_grad]
 
     def freeze_backbone(self) -> None:
-        """Freeze all backbone parameters (non-LoRA, non-head)."""
+        """Freeze all backbone parameters (non-LoRA, non-head).
+
+        Keeps LoRA adapter weights and the classification head trainable,
+        so this is safe to call before or after add_lora().
+        """
         for name, param in self.named_parameters():
             if "lora" not in name.lower() and not name.startswith("_head"):
                 param.requires_grad_(False)
@@ -242,13 +247,23 @@ class CLModel(nn.Module, ABC):
         return weights
 
     def merge_lora(self, task_id: int) -> None:
-        """Merge LoRA adapter task_{task_id} into the base weights and remove it."""
+        """Merge LoRA adapter task_{task_id} into the base weights and remove it.
+
+        Only unwraps the LoraModel entirely when no adapters remain,
+        so other task adapters are preserved.
+        """
         if not hasattr(self._backbone, "peft_config"):
             return
         adapter_name = f"task_{task_id}"
+        if adapter_name not in self._backbone.peft_config:
+            return
         self._backbone.merge_adapter(adapter_names=[adapter_name])
-        self._backbone = self._backbone.model   # unwrap LoraModel → plain backbone
-        self._active_lora = None
+        del self._backbone.peft_config[adapter_name]
+        if not self._backbone.peft_config:
+            # No adapters left — unwrap back to a plain nn.Module
+            self._backbone = self._backbone.model
+        if self._active_lora == task_id:
+            self._active_lora = None
 
     def set_active_lora(self, task_id: int) -> None:
         """Activate adapter task_{task_id} for inference."""

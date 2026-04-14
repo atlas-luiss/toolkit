@@ -30,7 +30,7 @@ class DERPP(Strategy):
         if x_m is not None:
             x_m = x_m.to(model._device)
             y_m = y_m.to(model._device)
-            logits_m = model(x_m)
+            logits_m = model(x_m, task_id)
 
             if z_m is not None and self.alpha > 0:
                 z_m = z_m.to(model._device)

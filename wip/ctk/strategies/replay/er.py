@@ -29,6 +29,6 @@ class ExperienceReplay(Strategy):
         if x_m is not None:
             x_m = x_m.to(model._device)
             y_m = y_m.to(model._device)
-            loss = loss + F.cross_entropy(model(x_m), y_m)
+            loss = loss + F.cross_entropy(model(x_m, task_id), y_m)
 
         return loss

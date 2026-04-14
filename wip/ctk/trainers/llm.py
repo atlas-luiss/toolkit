@@ -213,11 +213,14 @@ class LLMTrainer:
         return self._default_evaluate(loader)
 
     def save(self, path: str) -> None:
-        """Save model and tokenizer to path."""
+        """Save model and tokenizer to path (no-op if model has no save_pretrained)."""
         os.makedirs(path, exist_ok=True)
-        if hasattr(self.model.model, "save_pretrained"):
-            self.model.model.save_pretrained(path)
-        self.model.tokenizer.save_pretrained(path)
+        inner = getattr(self.model, "model", None)
+        if inner is not None and hasattr(inner, "save_pretrained"):
+            inner.save_pretrained(path)
+        tokenizer = getattr(self.model, "tokenizer", None)
+        if tokenizer is not None and hasattr(tokenizer, "save_pretrained"):
+            tokenizer.save_pretrained(path)
         logger.info(f"Saved to {path}")
 
     # ------------------------------------------------------------------

@@ -2,23 +2,15 @@
 Progressive results callback — displays accuracy matrix and metrics after each task.
 """
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
+import numpy as np
+from tabulate import tabulate
+from ctk.utils import format_time
 
-try:
-    from tabulate import tabulate
-except ImportError:
-    tabulate = None
-
-try:
-    from ctk.utils import format_time
-except ImportError:
-    def format_time(seconds):
-        h, rem = divmod(int(seconds), 3600)
-        m, s = divmod(rem, 60)
-        return f"{h:02d}:{m:02d}:{s:02d}"
+    
+def format_time(seconds):
+    h, rem = divmod(int(seconds), 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
 
 
 class Callback:
@@ -76,9 +68,9 @@ class ProgressiveResultsCallback(Callback):
         print(tabulate(rows, headers=headers, tablefmt="grid"))
 
         completed = task_id + 1
-        diag_accs = [acc_matrix[i][i] for i in range(completed)]
-        avg_acc = np.mean(diag_accs)
         current_acc = acc_matrix[task_id][task_id]
+        # Average accuracy = mean of the current row (retention across all seen tasks)
+        avg_acc = np.mean(acc_matrix[task_id][:completed])
 
         print(f"\nMetrics after Task {task_id}:")
         print(f"  Current task accuracy:  {current_acc:.2f}%")

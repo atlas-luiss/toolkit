@@ -5,12 +5,7 @@ import csv
 import time
 import math
 from pathlib import Path
-
-try:
-    import torch
-except ImportError:
-    torch = None
-
+import torch
 from .progressive_results import Callback
 
 
@@ -74,7 +69,8 @@ class ModelCheckpointing(Callback):
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
         path = self.checkpoint_dir / filename
         strategy = trainer.strategy
-        state = {'model_state': strategy.model.state_dict()}
+        model = getattr(trainer, 'model', None) or getattr(strategy, 'model', None)
+        state = {'model_state': model.state_dict()}
 
         if hasattr(strategy, 'classifier'):
             state['classifier_state'] = strategy.classifier.state_dict()
@@ -170,7 +166,12 @@ class GradientClipping(Callback):
         self.norm_type = norm_type
 
     def on_before_step(self, trainer, task_id, epoch, batch_idx, loss, **kwargs):
-        params = [p for p in trainer.strategy.parameters() if p.grad is not None]
+        optimizer = getattr(trainer.strategy, 'optimizer', None)
+        if optimizer is not None:
+            params = [p for group in optimizer.param_groups
+                      for p in group['params'] if p.grad is not None]
+        else:
+            params = [p for p in trainer.model.parameters() if p.grad is not None]
         if params:
             torch.nn.utils.clip_grad_norm_(params, self.max_norm, self.norm_type)
 

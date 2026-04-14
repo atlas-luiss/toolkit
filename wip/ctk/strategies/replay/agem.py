@@ -21,6 +21,7 @@ class AGEM(Strategy):
 
     def compute_loss(self, batch, model, task_id):
         x, y = batch[0].to(model._device), batch[1].to(model._device)
+        self._task_id = task_id   # stored for use in before_update
         self.buffer.add_batch(x.detach(), y.detach(), task_id)
         return F.cross_entropy(model(x, task_id), y)
 
@@ -29,8 +30,9 @@ class AGEM(Strategy):
         if self.buffer is None or len(self.buffer) == 0:
             return
 
-        device = model._device
-        params = [p for p in model.parameters() if p.requires_grad]
+        task_id = getattr(self, '_task_id', 0)
+        device  = model._device
+        params  = [p for p in model.parameters() if p.requires_grad]
 
         saved_grads = [
             p.grad.clone() if p.grad is not None else None
@@ -45,7 +47,7 @@ class AGEM(Strategy):
         y_ref = y_ref.to(device)
 
         optimizer.zero_grad()
-        loss_ref = F.cross_entropy(model(x_ref), y_ref)
+        loss_ref = F.cross_entropy(model(x_ref, task_id), y_ref)
         loss_ref.backward()
 
         g_ref = torch.cat([

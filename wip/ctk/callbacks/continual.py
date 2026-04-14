@@ -3,17 +3,8 @@
 import sys
 import json
 from pathlib import Path
-
-try:
-    import numpy as np
-except ImportError:
-    np = None
-
-try:
-    from tabulate import tabulate
-except ImportError:
-    tabulate = None
-
+import numpy as np
+from tabulate import tabulate
 from .progressive_results import Callback
 
 
