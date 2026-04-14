@@ -5,9 +5,9 @@ import torch.nn.functional as F
 import numpy as np
 from typing import Dict, List, Optional
 
-from ctk.models.base import CLModel
-from ctk.scenarios.base import CLScenario
-from ctk.strategies.base import Strategy
+from ..models.base import CLModel
+from ..scenarios.base import CLScenario
+from ..strategies.base import Strategy
 
 
 class ContinualEvaluator:
