@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Experiment outputs (logs, results, checkpoints)
+runs/
+logs/
+outputs/
+checkpoints/
+*.pt
+*.bin
+*.safetensors
+results*.json
+
+# Data / caches
+data/
+hf_cache/
+
+# Notebooks / editors / OS
+.ipynb_checkpoints/
+*.ipynb
+.vscode/
+.idea/
+*.swp
+.DS_Store
