@@ -2,10 +2,13 @@
 # README reference results: exactly the CLI commands shown in the README, toolkit defaults
 # (ViT-B/16 IN21K, preprocess=model, AdamW lr 1e-3, batch 64, 1 epoch/task), 3 seeds.
 # Usage: bash experiments/reference.sh <gpu> [names...]      logs: runs/reference/<name>_s<seed>/
-cd /scratch/eric/projects/toolkit
+cd "$(dirname "$0")/.."                       # run from the repository root
 export PYTHONUNBUFFERED=1 PYTHONWARNINGS=ignore
+PY=${PYTHON:-python}
+CIFAR=${CL_DATA:-./data}/cifar100
+mkdir -p runs/reference
 GPU=$1; shift
-C="--data cifar100 --root /scratch/eric/data/cifar100 --data-set download=False"
+C="--data cifar100 --root $CIFAR"
 declare -A R=(
   [frozen-ranpac]="--strategy frozen --classifier ranpac --epochs 0"
   [frozen-klda]="--strategy frozen --classifier klda --epochs 0"
@@ -28,7 +31,7 @@ declare -A R=(
 NAMES=${@:-${!R[@]}}
 for n in $NAMES; do for s in 0 1 2; do
   echo "[$(date +%T)] $n s$s"
-  CUDA_VISIBLE_DEVICES=$GPU .venv/bin/python -m cl_toolkit $C ${R[$n]} --seed $s --out runs/reference/${n}_s$s \
+  CUDA_VISIBLE_DEVICES=$GPU $PY -m cl_toolkit $C ${R[$n]} --seed $s --out runs/reference/${n}_s$s \
     > runs/reference/${n}_s$s.out 2>&1 || echo "FAILED $n s$s"
 done; done
 echo DONE

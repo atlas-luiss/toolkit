@@ -61,4 +61,15 @@ trainer  = clt.ContinualTrainer(model, scenario, strategy)       # 5. training l
 results = trainer.fit()
 ```
 
-Next: [customize.md](customize.md) — your own data, model, method, head, router or merging rule.
+`trainer.fit()` is itself a short loop you can write out, to act between the steps:
+
+```python
+trainer = clt.ContinualTrainer(clt.models.mlp(), scenario, clt.strategies.ExperienceReplay(memory_size=200))
+trainer.start()
+for task in scenario:
+    trainer.train_task(task)               # train on this task
+    trainer.evaluate(task.task_id)         # test on every task seen so far
+results = trainer.finish()
+```
+
+Next: the [tutorial](tutorial/README.md) explains each piece step by step, from your data to your own method.

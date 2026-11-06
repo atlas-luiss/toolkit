@@ -5,7 +5,7 @@ import re
 import pytest
 
 DOCS = os.path.join(os.path.dirname(__file__), "..", "docs")
-FILES = sorted(f for f in os.listdir(DOCS) if f.endswith(".md")) if os.path.isdir(DOCS) else []
+FILES = sorted(os.path.relpath(os.path.join(d, f), DOCS) for d, _, fs in os.walk(DOCS) for f in fs if f.endswith(".md"))
 
 
 @pytest.mark.parametrize("name", FILES)

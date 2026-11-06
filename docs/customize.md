@@ -1,6 +1,6 @@
-# Customize
+# Customize: more extension points
 
-Swap any piece for your own. Each example runs as-is in seconds.
+Your own classifier head, router, merging rule and training loop. Each example runs as-is in seconds.
 
 ```python
 import torch
@@ -9,99 +9,8 @@ import torch.nn.functional as F
 import cl_toolkit as clt
 ```
 
-## Your data
-
-Any datasets that return `(x, y)`, with `y` an integer class:
-
-```python
-from torch.utils.data import TensorDataset
-
-x = torch.randn(6000, 32)
-y = x[:, :10].argmax(1)                              # 10 classes
-my_train, my_test = TensorDataset(x[:5000], y[:5000]), TensorDataset(x[5000:], y[5000:])
-
-r = clt.run(data=(my_train, my_test), model="mlp", strategy="er", num_tasks=5, epochs=3)
-```
-
-An image folder works too: `clt.run(data="/path/to/images", ...)` (one sub-folder per class).
-
-## Your model
-
-Any `nn.Module` that turns an input into a feature vector:
-
-```python
-my_net = nn.Sequential(nn.Linear(32, 64), nn.ReLU(), nn.Linear(64, 64))
-
-r = clt.run(data="toy", model=clt.models.wrap(my_net, embed_dim=64), strategy="er",
-            freeze_backbone=False)          # your model is untrained, so train it
-```
-
-Pre-trained models by name: `model="vit_base_patch16_224.augreg_in21k"` (timm),
-`model="hf:bert-base-uncased"` or `"hf:Qwen/Qwen2.5-0.5B-Instruct"` (Hugging Face),
-`model="open_clip:ViT-B-16/openai"`. They are frozen by default; `freeze_backbone=False` fine-tunes.
-
-## Your method
-
-Subclass `Strategy` and change the loss:
-
-```python
-class SmallFeatures(clt.strategies.Strategy):
-    def compute_loss(self, batch, model, task_id):
-        x, y = self.to_device(batch, model)
-        feats = model.encode(x)                       # features
-        logits = model.classify(feats, task_id)       # class scores
-        loss = F.cross_entropy(logits, y) + 1e-3 * feats.pow(2).mean()
-        return loss, logits
-
-r = clt.run(data="toy", model="mlp", strategy=SmallFeatures())     # no memory, so it forgets old tasks
-```
-
-In class-incremental training, the scores of classes not seen yet are `-inf`, so they can never be
-predicted. `F.cross_entropy` handles that; losses that spread probability over all classes
-(e.g. label smoothing) must use only the seen ones: `logits[:, self.scenario.seen_classes(task_id)]`.
-
-Do something between tasks with `on_task_start` / `on_task_end`:
-
-```python
-class CountSamples(clt.strategies.Strategy):
-    def on_task_end(self, task_id, train_loader, model):
-        print(f"task {task_id}: {len(train_loader.dataset)} training samples")
-
-r = clt.run(data="toy", model="mlp", strategy=CountSamples(), num_tasks=3)
-```
-
-All hooks: `on_task_start`, `compute_loss`, `before_update` (after backward, before the step),
-`on_task_end`, `before_eval`, `evaluate_task`. Inside them, `self.scenario` and `self.task` tell
-you where you are.
-
-Add memory to your method with the built-in replay buffer:
-
-```python
-from cl_toolkit.strategies.replay import ReservoirBuffer
-
-class MyReplay(clt.strategies.Strategy):
-    def __init__(self, memory_size=200):
-        self.memory = ReservoirBuffer(memory_size)
-
-    def compute_loss(self, batch, model, task_id):
-        x, y = self.to_device(batch, model)
-        loss, logits = self.ce(model, x, y, task_id)                 # cross-entropy on new data
-        old_x, old_y, old_t, _ = self.memory.sample(len(x), x.device)
-        if old_x is not None:
-            with self.memory_mask(model, task_id):                   # old samples: all seen classes
-                loss = loss + F.cross_entropy(model(old_x, old_t), old_y)
-        self.memory.add(x, y, task_id)
-        return loss, logits
-
-r = clt.run(data="toy", model="mlp", strategy=MyReplay())
-```
-
-Combine it with anything built in:
-
-```python
-r = clt.run(data="toy", model="mlp", strategy=MyReplay(), classifier="ncm")                 # + a head
-r = clt.run(data="toy", model="mlp", strategy=clt.strategies.LoRAAdapter(MyReplay()))       # + LoRA per task
-```
+Your data, your model and your own CL method are covered step by step in the
+[tutorial](tutorial/README.md) (steps 1, 7 and 8). This page adds the other extension points.
 
 ## Your classifier head
 
@@ -185,9 +94,14 @@ class SGDTrainer(clt.ContinualTrainer):
 r = clt.run(data="toy", model="mlp", strategy="er", trainer_cls=SGDTrainer, lr=0.05)
 ```
 
+To run your own code *between* training and evaluation (merge after each task, evaluate only
+some tasks, ...), write the loop yourself with `trainer.start()`, `trainer.train_task(task)`,
+`trainer.evaluate(task_id)` and `trainer.finish()`: see
+[tutorial step 8](tutorial/8_your_loop.md).
+
 ## Check your method
 
 Add one line to `CASES` in `tests/test_integrity.py`, e.g.
-`"my-replay": (mlp, vec_bench, dict(strategy=MyReplay()))`, and run
-`pytest tests/test_integrity.py -k my-replay`. It checks that your method never touches test data,
+`"my-method": (mlp, vec_bench, dict(strategy=MyMethod()))`, and run
+`pytest tests/test_integrity.py -k my-method`. It checks that your method never touches test data,
 never uses the task id at test time, does not peek at labels, and does not learn during evaluation.

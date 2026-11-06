@@ -25,8 +25,9 @@ EVAL_MASKS = ("none", "seen")
 class ContinualTrainer:
     """Runs a strategy over a scenario and records the accuracy matrix.
 
-    Override points (coarse → fine): ``fit``, ``run_task``, ``run_epoch``,
-    ``train_step``, ``evaluate_task``, ``make_optimizer``.
+    ``fit()`` runs everything; ``start``, ``train_task``, ``evaluate`` and ``finish`` are its
+    steps, to write the loop yourself. Override points (coarse → fine): ``fit``, ``run_task``,
+    ``run_epoch``, ``train_step``, ``evaluate_task``, ``make_optimizer``.
 
     Args:
         precision: "bf16", "fp16" or "fp32". Default: bf16 on CUDA, fp32 on CPU.
@@ -93,6 +94,23 @@ class ContinualTrainer:
 
     # ------------------------------------------------------------------ main loop
     def fit(self) -> dict:
+        """The whole loop. Written out, it is::
+
+            trainer.start()
+            for task in scenario:
+                trainer.train_task(task)
+                trainer.evaluate(task.task_id)
+            return trainer.finish()
+
+        Write that loop yourself to run your own code between the steps.
+        """
+        self.start()
+        for task in self.scenario:
+            self.run_task(task)
+        return self.finish()
+
+    def start(self) -> None:
+        """Prepare the model, the scenario, the strategy and the accuracy matrix."""
         model, scen = self.model, self.scenario
         model.to(self.device)
         scen.setup(model)
@@ -100,6 +118,7 @@ class ContinualTrainer:
         T = scen.num_tasks
         self.acc = np.full((T, T), np.nan)
         self.results = {"accuracy_matrix": self.acc, "task_results": [], "config": self.config()}
+        self._last_task, self._train_time = None, float("nan")
         self.callbacks.on_train_begin(self)
         bb = [p for p in model._backbone.parameters()]
         n_train = sum(p.numel() for p in bb if p.requires_grad)
@@ -109,23 +128,39 @@ class ContinualTrainer:
                  f"{self.epochs_per_task} ep/task | lr={self.lr} | {self.precision}\n"
                  f"model {self.results['config']['model']} | backbone "
                  f"{'frozen' if n_train == 0 else f'trainable ({n_train:,} params)'} at start\n{'=' * 70}")
-        t_start = time.time()
-        for task in scen:
-            self.run_task(task)
-        if not self.eval_every_task:
-            self.evaluate_seen(T - 1)
+        self._t_start = time.time()
+
+    def finish(self) -> dict:
+        """Compute the metrics from the accuracy matrix and return the results."""
+        if not hasattr(self, "_t_start"):
+            raise RuntimeError("call trainer.start() before the loop")
+        last = self._last_task
+        if last is not None and np.isnan(self.acc[last]).all():
+            self.evaluate_seen(last)                      # eval_every_task=False: evaluate once at the end
         sizes = [len(t.test_loader.dataset) for t in self.scenario.tasks]
         self.results["test_sizes"] = sizes
         self.results.update(compute_cl_metrics(self.acc, sizes))
-        self.results["total_time"] = time.time() - t_start
+        self.results["total_time"] = time.time() - self._t_start
         self.callbacks.on_train_end(self, self.results)
         if self.verbose:
             print_results(self.acc, self.results)
         return self.results
 
     def run_task(self, task: TaskInfo) -> None:
+        """Train on one task, then evaluate every task seen so far (if ``eval_every_task``)."""
+        self.train_task(task)
+        if self.eval_every_task:
+            self.evaluate(task.task_id)
+        else:
+            self._record_task(task.task_id, [], 0.0)
+
+    def train_task(self, task: TaskInfo) -> None:
+        """Train on one task: the strategy's ``on_task_start``, the epochs, its ``on_task_end``."""
+        if not hasattr(self, "_t_start"):
+            raise RuntimeError("call trainer.start() before the loop")
         t, model, strat = task.task_id, self.model, self.strategy
         strat.task = task
+        self._last_task = t
         self.log(f"\n--- Task {t}/{self.scenario.num_tasks - 1}  classes={len(task.classes)}  "
                  f"train={len(task.train_loader.dataset)}")
         self.callbacks.on_task_begin(self, t)
@@ -157,12 +192,19 @@ class ContinualTrainer:
         # long-lived autocast region would keep serving stale cached bf16 weight casts.
         strat.on_task_end(t, task.train_loader, model)
         model.end_task(t)
-        train_time = time.time() - t0
+        self._train_time = time.time() - t0
 
+    def evaluate(self, after_task: int) -> List[float]:
+        """Test on every task seen so far, fill row ``after_task`` of the accuracy matrix and
+        return those accuracies (one per task)."""
         t1 = time.time()
-        accs = self.evaluate_seen(t) if self.eval_every_task else []
+        accs = self.evaluate_seen(after_task)
+        self._record_task(after_task, accs, time.time() - t1)
+        return accs
+
+    def _record_task(self, t: int, accs: List[float], eval_time: float) -> None:
         tm = {"task_id": t, "accuracy": float(np.mean(accs)) if accs else float("nan"),
-              "task_accuracies": accs, "train_time": train_time, "eval_time": time.time() - t1}
+              "task_accuracies": accs, "train_time": self._train_time, "eval_time": eval_time}
         self.results["task_results"].append(tm)
         self.callbacks.on_task_end(self, t, tm)
 

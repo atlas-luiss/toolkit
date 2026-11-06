@@ -33,3 +33,6 @@ hf_cache/
 .idea/
 *.swp
 .DS_Store
+
+# Local notes
+VERIFICATION.md

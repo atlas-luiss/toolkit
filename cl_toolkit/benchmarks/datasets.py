@@ -115,6 +115,8 @@ DATASETS: Dict[str, Callable[..., CLBenchmark]] = {
     "folder": from_folder,
     "toy": lambda root=None, num_tasks=10, **kw: __import__("cl_toolkit.benchmarks.toy", fromlist=["toy"]).toy(
         root, num_tasks, **kw),
+    "toy-images": lambda root=None, num_tasks=10, **kw: __import__(
+        "cl_toolkit.benchmarks.toy", fromlist=["toy_images"]).toy_images(root, num_tasks, **kw),
 }
 
 
@@ -125,7 +127,7 @@ def get_benchmark(name: str, root: Optional[str], num_tasks: int = 10, **kw) -> 
         from .text import hf_text
         return hf_text(name[3:], num_tasks, root=root, **kw)
     key = name.lower().replace("_", "-")
-    if root is None and key in DATASETS and key not in ("folder", "toy"):
+    if root is None and key in DATASETS and key not in ("folder", "toy", "toy-images"):
         root = os.path.join("data", key)
         print(f"[cl_toolkit] no root given: using ./{root}", flush=True)
     if key in DATASETS:

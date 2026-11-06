@@ -256,7 +256,7 @@ REFUSALS = [
 
 
 # Cells that run correctly but whose newest task stays at chance with these tiny models and the
-# methods' default hyper-parameters. Each was checked by hand (see VERIFICATION.md, section 5).
+# methods' default hyper-parameters. Each was checked by hand: denser settings / other seeds learn.
 _SPARSE = ("sparsifying / consensus merge at default settings keeps too little of the newest task "
            "vector (denser settings learn it: TIES density 0.5 -> 66.7%, Breadcrumbs lam 1 -> 50%, "
            "DARE p 0.5 -> 41.7%)")

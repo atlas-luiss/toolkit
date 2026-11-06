@@ -18,7 +18,7 @@ Building blocks (all swappable):
     cl_toolkit.trainers     the loop               ContinualTrainer
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 from cl_toolkit import adapters, benchmarks, callbacks, heads, merging, models, prompts, routing, scenarios, strategies, trainers
 from cl_toolkit.api import available, build, run

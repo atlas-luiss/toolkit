@@ -154,3 +154,29 @@ def test_run_with_custom_pieces(tmp_path):
     assert out.exists() and r["avg_accuracy"] > 10
     with pytest.raises(KeyError):
         clt.build((tr, te), model=MLP(), strategy="nope", num_tasks=2, num_workers=0, device="cpu")
+
+
+def test_trainer_steps_equal_fit():
+    """start / train_task / evaluate / finish, written out, is exactly fit()."""
+    import numpy as np
+    import torch
+    import cl_toolkit as clt
+    from cl_toolkit.benchmarks import split_by_class, toy_data
+
+    tasks = split_by_class(*toy_data(), num_tasks=4)
+
+    def trainer():
+        torch.manual_seed(0)
+        return clt.ContinualTrainer(clt.models.mlp(device="cpu"), clt.Scenario(tasks, "class"),
+                                    clt.strategies.ExperienceReplay(memory_size=100), verbose=False)
+
+    a = trainer().fit()
+    tr = trainer()
+    with pytest.raises(RuntimeError, match="start"):
+        tr.train_task(tr.scenario.get_task(0))
+    tr.start()
+    rows = [tr.evaluate(t.task_id) for t in tr.scenario if tr.train_task(t) is None]
+    b = tr.finish()
+    np.testing.assert_array_equal(a["accuracy_matrix"], b["accuracy_matrix"])
+    assert rows[-1] == list(b["accuracy_matrix"][-1])
+    assert a["avg_accuracy"] == b["avg_accuracy"] and len(b["task_results"]) == 4

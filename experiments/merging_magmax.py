@@ -23,6 +23,8 @@ from cl_toolkit.callbacks import Callback, GradientClipping
 from cl_toolkit.strategies import NaiveStrategy
 from cl_toolkit.trainers.cl_trainer import compute_cl_metrics
 
+CIFAR_ROOT = os.path.join(os.environ.get("CL_DATA", "./data"), "cifar100")   # set CL_DATA to your data folder
+
 seed = int(sys.argv[1])
 epochs = int(sys.argv[2]) if len(sys.argv) > 2 else 10          # 2nd arg only for smoke tests
 out = f"runs/merging/magmax_cifar100_s{seed}" + ("" if epochs == 10 else f"_ep{epochs}_smoke")
@@ -55,7 +57,7 @@ class SaveFinetuned(Callback):
 
 
 saver = SaveFinetuned()
-tr = clt.build("cifar100", root="/scratch/eric/data/cifar100", data_kwargs={"download": False},
+tr = clt.build("cifar100", root=CIFAR_ROOT,
                model="open_clip:ViT-B-16/openai", scenario="class", strategy=NaiveStrategy(train_mask="current"),
                classifier="clip-zeroshot", freeze_backbone=False, num_tasks=10, epochs=epochs, lr=1e-5,
                optimizer_cls=torch.optim.AdamW, weight_decay=0.1, scheduler="cosine", batch_size=128,

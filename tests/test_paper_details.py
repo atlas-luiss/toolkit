@@ -1,4 +1,4 @@
-"""Details checked against the authors' code (see VERIFICATION.md, section 3)."""
+"""Details checked against the papers' / authors' code, and regressions found by the interoperability grid."""
 
 import os
 import sys

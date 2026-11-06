@@ -1,4 +1,4 @@
-"""A representative slice of experiments/interop_grid.py (the full grid: VERIFICATION.md, section 5).
+"""A representative slice of experiments/interop_grid.py (run that script for the full grid).
 
 One method per family x every scenario on a CLModel, a timm ViT and a Hugging Face decoder LLM:
 each cell must run (finite accuracies, no task-identity leak) or be refused with a clear error.
