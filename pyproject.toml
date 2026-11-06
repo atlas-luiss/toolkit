@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cl-toolkit"
+version = "0.4.0"
+description = "Continual Learning Toolkit: CL experiments that don't start from scratch"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["torch>=2.1", "torchvision>=0.16", "timm>=0.9", "peft>=0.10", "numpy>=1.24"]
+
+[project.optional-dependencies]
+text = ["transformers>=4.40", "datasets>=2.14"]
+clip = ["open_clip_torch"]
+log = ["wandb", "tensorboard", "tqdm"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+cl-toolkit = "cl_toolkit.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["cl_toolkit*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -p no:cacheprovider"
